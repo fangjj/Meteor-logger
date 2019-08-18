@@ -215,7 +215,10 @@ class Logger {
         check(message, Match.Optional(Match.OneOf(Number, String, null)));
         check(data, Match.Optional(Match.OneOf(String, Object, null)));
         check(userId, Match.Optional(Match.OneOf(String, Number, null)));
-        emitter(level, message, data, (userId || this.userId));
+        this.unblock();
+        Meteor.defer(() => {
+          emitter(level, message, data, (userId || this.userId));
+        })
       };
       Meteor.methods(method);
     }
