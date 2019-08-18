@@ -1,6 +1,6 @@
-import { Meteor }       from 'meteor/meteor';
-import { ReactiveVar }  from 'meteor/reactive-var';
-import { check, Match } from 'meteor/check';
+import { Meteor } from "meteor/meteor";
+import { ReactiveVar } from "meteor/reactive-var";
+import { check, Match } from "meteor/check";
 
 const helpers = {
   isObject(obj) {
@@ -13,10 +13,14 @@ const helpers = {
     return Array.isArray(obj);
   },
   isBoolean(obj) {
-    return obj === true || obj === false || Object.prototype.toString.call(obj) === '[object Boolean]';
+    return (
+      obj === true ||
+      obj === false ||
+      Object.prototype.toString.call(obj) === "[object Boolean]"
+    );
   },
   isFunction(obj) {
-    return typeof obj === 'function' || false;
+    return typeof obj === "function" || false;
   },
   isEmpty(obj) {
     if (this.isDate(obj)) {
@@ -36,10 +40,12 @@ const helpers = {
   }
 };
 
-const _helpers = ['String', 'Date'];
+const _helpers = ["String", "Date"];
 for (let i = 0; i < _helpers.length; i++) {
-  helpers['is' + _helpers[i]] = function (obj) {
-    return Object.prototype.toString.call(obj) === '[object ' + _helpers[i] + ']';
+  helpers["is" + _helpers[i]] = function(obj) {
+    return (
+      Object.prototype.toString.call(obj) === "[object " + _helpers[i] + "]"
+    );
   };
 }
 
@@ -51,13 +57,16 @@ let _inst = 0;
  */
 class Logger {
   constructor() {
-    this.userId    = new ReactiveVar(null);
-    this.prefix    = ++_inst;
-    this._rules    = {};
+    this.userId = new ReactiveVar(null);
+    this.prefix = ++_inst;
+    this._rules = {};
     this._emitters = [];
 
     if (Meteor.isClient) {
-      const _accounts = (Package && Package['accounts-base'] && Package['accounts-base'].Accounts) ? Package['accounts-base'].Accounts : undefined;
+      const _accounts =
+        Package && Package["accounts-base"] && Package["accounts-base"].Accounts
+          ? Package["accounts-base"].Accounts
+          : undefined;
       if (_accounts) {
         _accounts.onLogin(() => {
           this.userId.set(Meteor.userId());
@@ -86,27 +95,51 @@ class Logger {
     let data = Logger.prototype.antiCircular(_data);
 
     for (const i in this._emitters) {
-      if (this._rules[this._emitters[i].name] && this._rules[this._emitters[i].name].enable === true) {
-        if (Meteor.isServer && this._rules[this._emitters[i].name].server === false || Meteor.isClient && this._rules[this._emitters[i].name].client === false) {
+      if (
+        this._rules[this._emitters[i].name] &&
+        this._rules[this._emitters[i].name].enable === true
+      ) {
+        if (
+          (Meteor.isServer &&
+            this._rules[this._emitters[i].name].server === false) ||
+          (Meteor.isClient &&
+            this._rules[this._emitters[i].name].client === false)
+        ) {
           continue;
         }
 
-        if (this._rules[this._emitters[i].name].allow.indexOf('*') !== -1 || this._rules[this._emitters[i].name].allow.indexOf(level) !== -1) {
-          if (level === 'TRACE') {
+        if (
+          this._rules[this._emitters[i].name].allow.indexOf("*") !== -1 ||
+          this._rules[this._emitters[i].name].allow.indexOf(level) !== -1
+        ) {
+          if (level === "TRACE") {
             if (helpers.isString(data)) {
-              data = {data: helpers.clone(data)};
+              data = { data: helpers.clone(data) };
             }
             data.stackTrace = this._getStackTrace();
           }
 
-          if (Meteor.isClient && this._emitters[i].denyClient === true && this._emitters[i].denyServer === false) {
+          if (
+            Meteor.isClient &&
+            this._emitters[i].denyClient === true &&
+            this._emitters[i].denyServer === false
+          ) {
             Meteor.call(this._emitters[i].method, level, message, data, uid);
-          } else if (this._rules[this._emitters[i].name].client === true && this._rules[this._emitters[i].name].server === true && this._emitters[i].denyClient === false && this._emitters[i].denyServer === false) {
+          } else if (
+            this._rules[this._emitters[i].name].client === true &&
+            this._rules[this._emitters[i].name].server === true &&
+            this._emitters[i].denyClient === false &&
+            this._emitters[i].denyServer === false
+          ) {
             this._emitters[i].emitter(level, message, data, uid);
             if (Meteor.isClient) {
               Meteor.call(this._emitters[i].method, level, message, data, uid);
             }
-          } else if (Meteor.isClient && this._rules[this._emitters[i].name].client === false && this._rules[this._emitters[i].name].server === true) {
+          } else if (
+            Meteor.isClient &&
+            this._rules[this._emitters[i].name].client === false &&
+            this._rules[this._emitters[i].name].server === true
+          ) {
             Meteor.call(this._emitters[i].method, level, message, data, uid);
           } else {
             this._emitters[i].emitter(level, message, data, uid);
@@ -152,7 +185,7 @@ class Logger {
     });
 
     if (!helpers.isArray(options.filter) || helpers.isEmpty(options.filter)) {
-      options.filter = ['*'];
+      options.filter = ["*"];
     }
 
     if (options.filter) {
@@ -192,7 +225,7 @@ class Logger {
    * @summary Register new adapter to be used within ostrio:logger package
    */
   add(name, emitter, init, denyClient = false, denyServer = false) {
-    if (Meteor.isServer && denyServer || Meteor.isClient && denyClient) {
+    if ((Meteor.isServer && denyServer) || (Meteor.isClient && denyClient)) {
       return;
     }
 
@@ -210,15 +243,29 @@ class Logger {
 
     if (Meteor.isServer) {
       const method = {};
-      method[`${this.prefix}_logger_emit_${name}`] = function (level, message, data, userId) {
+      method[`${this.prefix}_logger_emit_${name}`] = function(
+        level,
+        message,
+        data,
+        userId
+      ) {
         check(level, String);
         check(message, Match.Optional(Match.OneOf(Number, String, null)));
-        check(data, Match.Optional(Match.OneOf(String, Object, null)));
+        // data is Any type
+        check(data, Match.Optional(Match.Any));
         check(userId, Match.Optional(Match.OneOf(String, Number, null)));
         this.unblock();
         Meteor.defer(() => {
-          emitter(level, message, data, (userId || this.userId));
-        })
+          if (
+            Meteor.settings.public.log &&
+            Meteor.settings.public.log.console &&
+            Meteor.settings.public.log.console.server
+          ) {
+            console.log("client", message, data, userId || this.userId);
+          }
+
+          emitter(level, message, data, userId || this.userId);
+        });
       };
       Meteor.methods(method);
     }
@@ -233,28 +280,28 @@ class Logger {
    * @summary Methods below is shortcuts for _log() method
    */
   info(message, data, userId) {
-    return this._log('INFO', message, data, userId);
+    return this._log("INFO", message, data, userId);
   }
   debug(message, data, userId) {
-    return this._log('DEBUG', message, data, userId);
+    return this._log("DEBUG", message, data, userId);
   }
   error(message, data, userId) {
-    return this._log('ERROR', message, data, userId);
+    return this._log("ERROR", message, data, userId);
   }
   fatal(message, data, userId) {
-    return this._log('FATAL', message, data, userId);
+    return this._log("FATAL", message, data, userId);
   }
   warn(message, data, userId) {
-    return this._log('WARN', message, data, userId);
+    return this._log("WARN", message, data, userId);
   }
   trace(message, data, userId) {
-    return this._log('TRACE', message, data, userId);
+    return this._log("TRACE", message, data, userId);
   }
   log(message, data, userId) {
-    return this._log('LOG', message, data, userId);
+    return this._log("LOG", message, data, userId);
   }
   _(message, data, userId) {
-    return this._log('LOG', message, data, userId);
+    return this._log("LOG", message, data, userId);
   }
 
   /*
@@ -273,9 +320,9 @@ class Logger {
   _getCircularReplacer() {
     const seen = new WeakSet();
     return (key, value) => {
-      if (typeof value === 'object' && value !== null) {
+      if (typeof value === "object" && value !== null) {
         if (seen.has(value)) {
-          return '[Circular]';
+          return "[Circular]";
         }
         seen.add(value);
       }
@@ -297,17 +344,17 @@ class Logger {
       if (err.stack) {
         obj.stack = err.stack;
       } else {
-        obj.stack = 'Not available of not supported';
+        obj.stack = "Not available of not supported";
       }
     }
 
-    const idx = obj.stack.indexOf('_getStackTrace');
-    const idx2 = obj.stack.indexOf('_log');
+    const idx = obj.stack.indexOf("_getStackTrace");
+    const idx2 = obj.stack.indexOf("_log");
     if (idx >= 0) {
-      obj.stack = obj.stack.substring(obj.stack.indexOf('\n', idx + 1) + 1);
+      obj.stack = obj.stack.substring(obj.stack.indexOf("\n", idx + 1) + 1);
     }
     if (idx2 >= 0) {
-      obj.stack = obj.stack.substring(obj.stack.indexOf('\n', idx2 + 1) + 1);
+      obj.stack = obj.stack.substring(obj.stack.indexOf("\n", idx2 + 1) + 1);
     }
 
     return obj.stack;
@@ -321,17 +368,19 @@ class Logger {
  */
 class LoggerMessage {
   constructor(data) {
-    this.data    = data.data;
-    this.user    = data.user;
-    this.level   = data.level;
-    this.error   = data.error;
-    this.userId  = data.userId;
-    this.reason  = data.reason;
+    this.data = data.data;
+    this.user = data.user;
+    this.level = data.level;
+    this.error = data.error;
+    this.userId = data.userId;
+    this.reason = data.reason;
     this.details = data.details;
     this.message = data.message;
 
     this.toString = () => {
-      return `[${this.reason}] \nLevel: ${this.level}; \nDetails: ${JSON.stringify(this.data)}; \nUserId: ${this.userId};`;
+      return `[${this.reason}] \nLevel: ${
+        this.level
+      }; \nDetails: ${JSON.stringify(this.data)}; \nUserId: ${this.userId};`;
     };
   }
 }
